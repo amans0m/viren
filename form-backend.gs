@@ -8,16 +8,19 @@
  *  - Serves the approved notes back to the website wall as JSON.
  *
  * SETUP (about 10 minutes, use a campaign-owned Google account, not a personal one)
- *  1. Create a new Google Sheet. Name it "Campaign forms".
+ *  1. The Sheet already exists; its ID is set in SHEET_ID below. Deploy this script while signed in as the account
+ *     that owns the Sheet (the party email), or any account with edit access to it.
  *  2. In the Sheet: Extensions > Apps Script. Delete any code, paste this whole file, save.
- *  3. Set NOTIFY_EMAIL below to the campaign inbox.
+ *  3. NOTIFY_EMAIL below is set to virender.dass@1bc.ca. Make sure you can receive mail there.
  *  4. In the editor choose the function "setup" and click Run. Approve the permissions.
  *     This creates one tab per form with the right column headings.
  *  5. Deploy > New deployment > type "Web app".
  *       Execute as: Me
  *       Who has access: Anyone
+ *     If "Anyone" is not offered, the Google Workspace admin is blocking it. Ask the admin to allow it, or deploy from
+ *     a Gmail account that has edit access to the Sheet.
  *     Click Deploy and copy the Web app URL.
- *  6. In virenderdass-website.html find CONFIG.ENDPOINT and paste the URL between the quotes.
+ *  6. In assets/site.js find ENDPOINT near the top and paste the URL between the quotes.
  *  7. Test: submit a form on the site. A new row should appear in the Sheet within seconds.
  *
  * CURATING THE WALL (no code needed)
@@ -33,8 +36,12 @@
  * After changing this code, use Deploy > Manage deployments > Edit > New version, so the live URL updates.
  */
 
-const NOTIFY_EMAIL = "campaign@virenderdass.ca"; // CHANGE ME
+const NOTIFY_EMAIL = "virender.dass@1bc.ca";
 const MAX_LEN = 2000;
+
+// The campaign forms Google Sheet (owned by the party account). With this set, the script works whether it is created inside the Sheet or at script.google.com.
+const SHEET_ID = "1ihJEvPUpfXkPMUev3hhsZSICMmqI823L8MNcAw41lr4";
+function getSS() { return SHEET_ID ? SpreadsheetApp.openById(SHEET_ID) : SpreadsheetApp.getActiveSpreadsheet(); }
 
 const TABS = {
   yoursay:   "YourSay",
@@ -64,7 +71,7 @@ const EXTRA = {
 
 /** Run once from the editor. Creates tabs and headings. */
 function setup() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = getSS();
   Object.keys(TABS).forEach(function (type) {
     let sh = ss.getSheetByName(TABS[type]);
     if (!sh) sh = ss.insertSheet(TABS[type]);
@@ -74,6 +81,15 @@ function setup() {
   });
   const blank = ss.getSheetByName("Sheet1");
   if (blank && ss.getSheets().length > 1 && blank.getLastRow() === 0) ss.deleteSheet(blank);
+}
+
+/** Optional: run from the editor to confirm the Sheet and email work, without the website. */
+function testWrite() {
+  const res = doPost({ postData: { contents: JSON.stringify({
+    type: "yoursay", ref: "000000", topic: "Test", message: "Test row from the editor. Safe to delete.",
+    postal_code: "V2S 1A1", first_name: "Test", contact: "", consent_reply: "no", consent_publish: "no", privacy: "yes"
+  }) } });
+  Logger.log(res.getContent());
 }
 
 /** Receives form submissions from the website. */
@@ -86,7 +102,7 @@ function doPost(e) {
     const type = String(data.type || "");
     if (!TABS[type]) return out({ ok: false, error: "unknown form" });
 
-    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TABS[type]);
+    const sh = getSS().getSheetByName(TABS[type]);
     if (!sh) return out({ ok: false, error: "run setup first" });
 
     const row = FIELDS[type].map(function (k) { return clean(data[k]); })
@@ -98,14 +114,14 @@ function doPost(e) {
   } catch (err) {
     return out({ ok: false, error: String(err) });
   } finally {
-    lock.release();
+    lock.releaseLock();
   }
 }
 
 /** Serves approved notes to the website wall: ...exec?action=notes */
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === "notes") {
-    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TABS.yoursay);
+    const sh = getSS().getSheetByName(TABS.yoursay);
     if (!sh || sh.getLastRow() < 2) return out({ notes: [] });
     const values = sh.getDataRange().getValues();
     const head = values[0];
@@ -116,7 +132,8 @@ function doGet(e) {
       const published = String(r[idx("status")]).toLowerCase() === "published";
       const ok = String(r[idx("consent_publish")]).toLowerCase() === "yes";
       if (!published || !ok) continue;
-      const text = String(r[idx("published_text")] || r[idx("message")] || "").trim();
+      const unq = function (v) { return String(v || "").replace(/^'(?=[=+\-@])/, ""); }; // undo the formula guard for display
+      const text = unq(r[idx("published_text")] || r[idx("message")]).trim();
       if (!text) continue;
       const name = String(r[idx("published_name")] || r[idx("first_name")] || "A neighbour").trim().split(/\s+/)[0];
       notes.push({

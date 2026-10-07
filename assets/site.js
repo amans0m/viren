@@ -2,15 +2,15 @@
 (()=>{
 /* ====== SETTINGS: edit these at launch ====== */
 const CONFIG={
-  ENDPOINT:"",                       // Paste the Google Apps Script web app URL here (see setup notes)
-  PHONE_DISPLAY:"[604-000-0000]",    // Campaign phone or text number
-  PHONE_TEL:"",                      // Same number, digits only, e.g. "16045550123". Leave empty until live
+  ENDPOINT:"https://script.google.com/macros/s/AKfycbzjohpJ9nFGDLFu-7U92GwPEHphglaP7LWfcTB-hGuo9bseA5duYijw40GzPbJmhPTQ/exec",  // Google Apps Script web app (campaign forms Sheet)
+  PHONE_DISPLAY:"778-998-4736",      // Campaign phone or text number
+  PHONE_TEL:"17789984736",           // Same number, digits only
   LINKS:{
-    pledge:"https://action.1bc.ca/win",
-    donate:"https://action.1bc.ca/donate",  // Replace with a candidate-designated link when OneBC provides one
+    pledge:"https://action.1bc.ca/win",   // Interim: OneBC's pledge page. Replace with the campaign's own NationBuilder sign-up page when ready
+    donate:"https://www.virenderdass.ca/donate",
     video:""                                // Launch video URL (YouTube). Leave empty to hide the "Watch the launch video" button
   },
-  SHOW_SAMPLE_NOTES:true             // Set to false at launch so only real, approved notes appear
+  SHOW_SAMPLE_NOTES:false             // Set to false at launch so only real, approved notes appear
 };
 /* ============================================ */
 
@@ -209,8 +209,8 @@ function openPrivacy(){
   '<h3>What we collect</h3><p>What you type into our forms: your message, postal code and any contact details, name or address you choose to give.</p>'+
   '<h3>Why</h3><ul><li>To read and reply to your note.</li><li>To arrange volunteering, lawn signs and invitations.</li><li>To send campaign updates if you asked for them.</li></ul>'+
   '<h3>The wall</h3><p>We only show your message if you ticked the box, with your first name only. A person checks every note first.</p>'+
-  '<h3>Who sees it</h3><p>The campaign team and its service providers. [Confirm with OneBC whether data is shared with the party.]</p>'+
-  '<h3>Your choices</h3><p>You can ask us to correct or delete your information, or stop messages, at any time at [campaign email].</p></div>';
+  '<h3>Who sees it</h3><p>The campaign team, OneBC, and the service providers that run our forms and email. Your details may be added to the OneBC supporter list.</p>'+
+  '<h3>Your choices</h3><p>You can ask us to correct or delete your information, or stop messages, at any time at virender.dass@1bc.ca.</p></div>';
   dlg.showModal();
 }
 $$("[data-form]").forEach(b=>b.addEventListener("click",()=>openForm(b.dataset.form)));
@@ -248,6 +248,7 @@ function renderWall(notes,sample){
 }
 async function loadWall(){
   let notes=[];
+  if(CONFIG.ENDPOINT){$("#wall").replaceChildren(el("div",{class:"wall-empty"},"Loading notes..."))}
   if(CONFIG.ENDPOINT){
     try{const r=await fetch(CONFIG.ENDPOINT+"?action=notes");const j=await r.json();notes=(j&&j.notes)||[]}catch(e){}
   }
