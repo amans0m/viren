@@ -6,7 +6,7 @@ const CONFIG={
   PHONE_DISPLAY:"778-998-4736",      // Campaign phone or text number
   PHONE_TEL:"17789984736",           // Same number, digits only
   LINKS:{
-    pledge:"https://action.1bc.ca/win",   // Interim: OneBC's pledge page. Replace with the campaign's own NationBuilder sign-up page when ready
+    pledge:"pledge.html",   // the campaign's own pledge page
     donate:"https://www.virenderdass.ca/donate",
     video:""                                // Launch video URL (YouTube). Leave empty to hide the "Watch the launch video" button
   },
@@ -93,6 +93,18 @@ const FORMS={
       {n:"consent_email",t:"check",req:1,l:"Send me campaign updates by email."},
       {n:"consent_sms",t:"check",l:"Send me campaign updates by text. Message and data rates may apply."},
       {n:"privacy",t:"check",req:1,priv:1}
+    ]},
+  pledge:{title:"Pledge your support",submit:"Add my pledge",
+    ok:"Thank you. Your pledge is in. We will be in touch with voting dates and places.",
+    fields:[
+      {n:"first_name",l:"First name",t:"text",req:1,ac:"given-name"},
+      {n:"last_name",l:"Last name",t:"text",req:1,ac:"family-name"},
+      {n:"email",l:"Email",t:"email",req:1,ac:"email",pat:"email"},
+      {n:"mobile",l:"Mobile number",opt:1,t:"tel",ac:"tel",pat:"phone"},
+      {n:"postal_code",l:"Postal code",t:"text",req:1,ac:"postal-code",pat:"postal"},
+      {n:"pledge",t:"check",req:1,l:"I plan to vote for Virender Dass in Abbotsford-Mission."},
+      {n:"consent_email",t:"check",l:"Send me campaign updates and voting reminders by email, and by text if I add a mobile number. Message and data rates may apply."},
+      {n:"privacy",t:"check",req:1,priv:1}
     ]}
 };
 
@@ -108,6 +120,21 @@ function check(f,v){
   if(f.pat==="phone"&&!RX.phone.test(val))return "Enter a 10-digit phone number.";
   if(f.pat==="contact"&&!(RX.email.test(val)||RX.phone.test(val)))return "Enter a valid email address or phone number.";
   return "";
+}
+
+/* send a form to the Google Sheet: read the reply, retry on Google error pages, never fail silently */
+async function sendToSheet(url,payload){
+  const opts={method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)};
+  for(let i=0;i<3;i++){
+    try{
+      const r=await fetch(url,opts),t=await r.text();let j=null;try{j=JSON.parse(t)}catch(e){}
+      if(j&&j.ok)return true;
+    }catch(e){
+      try{await fetch(url,Object.assign({},opts,{mode:"no-cors"}));return true}catch(e2){}
+    }
+    await new Promise(res=>setTimeout(res,1000*(i+1)));
+  }
+  return false;
 }
 
 /* build a form */
@@ -155,11 +182,14 @@ function buildForm(key,mount,onDone){
   sub.appendChild(btn);form.appendChild(sub);
   form.appendChild(el("p",{class:"fine"},"We use what you send to run the campaign and to reply to you. See the privacy notice."));
 
+  const dep=def.fields.filter(f=>f.showIf);
+  if(dep.length){const src=form.elements[dep[0].showIf];const sync=()=>dep.forEach(f=>{form.elements[f.n].closest(".field").hidden=!src.checked});src.addEventListener("change",sync);sync()}
   form.addEventListener("submit",async e=>{
     e.preventDefault();
     let bad=null;const data={};
     def.fields.forEach(f=>{
       const id=uid+"-"+f.n;const row=document.getElementById(id)?.closest(".field")||form.querySelector('[name="'+f.n+'"]')?.closest(".field");
+      if(f.showIf&&row&&row.hidden){data[f.n]=(f.t==="check")?"no":"";return}
       let v;
       if(f.t==="check"){v=form.elements[f.n].checked;data[f.n]=v?"yes":"no"}
       else if(f.t==="checks"){v=$$('input[name="'+f.n+'"]:checked',form).map(x=>x.value).join(", ");data[f.n]=v;return}
@@ -171,6 +201,7 @@ function buildForm(key,mount,onDone){
       if(msg&&!bad)bad=ctl;
     });
     if(bad){bad.focus();return}
+    if(key==="pledge")data.consent_sms=(data.consent_email==="yes"&&data.mobile)?"yes":"no";
     if(key==="updates"&&data.consent_email!=="yes"&&data.consent_sms!=="yes"){return}
     btn.disabled=true;btn.textContent="Sending";
     const spam=form.elements.website.value||(Date.now()-loadedAt<2500);
@@ -178,8 +209,8 @@ function buildForm(key,mount,onDone){
     let demo=!CONFIG.ENDPOINT;
     try{
       if(!spam&&!demo){
-        await fetch(CONFIG.ENDPOINT,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},
-          body:JSON.stringify(Object.assign({type:key,ref:ref,submitted_at:new Date().toISOString(),page:location.href},data))});
+        const okSent=await sendToSheet(CONFIG.ENDPOINT,Object.assign({type:key,ref:ref,submitted_at:new Date().toISOString(),page:location.href},data));
+        if(!okSent)throw new Error("send failed");
       }else{await new Promise(r=>setTimeout(r,500))}
     }catch(err){
       btn.disabled=false;btn.textContent=def.submit;
@@ -190,6 +221,14 @@ function buildForm(key,mount,onDone){
     done.appendChild(el("h3",{},"Thank you."));
     done.appendChild(el("p",{},def.ok));
     if(key==="yoursay")done.appendChild(el("p",{class:"ref"},"Your reference code: <strong>"+ref+"</strong>"));
+    if(key==="pledge"){
+      const pre={first_name:data.first_name,last_name:data.last_name,email:data.email,mobile:data.mobile,postal_code:data.postal_code};
+      const nx=el("div",{class:"next"}),row=el("div",{class:"next-btns"});
+      nx.appendChild(el("h4",{},"Two more ways to help"));
+      const b1=el("button",{class:"btn btn-navy",type:"button"},"Request a lawn sign"),b2=el("button",{class:"btn btn-line",type:"button"},"Volunteer");
+      b1.addEventListener("click",()=>openForm("lawnsign",pre));b2.addEventListener("click",()=>openForm("volunteer",pre));
+      row.append(b1,b2);nx.appendChild(row);done.appendChild(nx);
+    }
     if(demo)done.appendChild(el("p",{class:"demo-note"},"Demo mode: nothing was sent or saved."));
     mount.replaceChildren(done);done.focus();
     if(onDone)onDone();
@@ -199,14 +238,16 @@ function buildForm(key,mount,onDone){
 
 /* dialogs */
 const dlg=$("#dlg");
-function openForm(key){
+function openForm(key,pre){
   const d=FORMS[key];$("#dlg-title").textContent=d.title;$("#dlg-intro").textContent=d.intro||"";
-  buildForm(key,$("#dlg-body"));dlg.showModal();
+  buildForm(key,$("#dlg-body"));
+  if(pre){const fm=$("#dlg-body form");for(const k in pre){if(pre[k]&&fm.elements[k])fm.elements[k].value=pre[k]}}
+  dlg.showModal();
 }
 function openPrivacy(){
   $("#dlg-title").textContent="Privacy notice";$("#dlg-intro").textContent="Draft for review. Replace with the approved notice before launch.";
   $("#dlg-body").innerHTML='<div class="priv">'+
-  '<h3>What we collect</h3><p>What you type into our forms: your message, postal code and any contact details, name or address you choose to give.</p>'+
+  '<h3>What we collect</h3><p>What you type into our forms: your message, postal code and any contact details, name or address you choose to give. If you pledge your support, we also keep that you plan to vote for Virender.</p>'+
   '<h3>Why</h3><ul><li>To read and reply to your note.</li><li>To arrange volunteering, lawn signs and invitations.</li><li>To send campaign updates if you asked for them.</li></ul>'+
   '<h3>The wall</h3><p>We only show your message if you ticked the box, with your first name only. A person checks every note first.</p>'+
   '<h3>Who sees it</h3><p>The campaign team, OneBC, and the service providers that run our forms and email. Your details may be added to the OneBC supporter list.</p>'+
@@ -221,6 +262,19 @@ dlg.addEventListener("click",e=>{if(e.target===dlg)dlg.close()});
 
 /* inline Your Say form */
 if($("#say-form"))buildForm("yoursay",$("#say-form"));
+if($("#pledge-form"))buildForm("pledge",$("#pledge-form"));
+
+/* share buttons on the pledge page */
+(function(){
+  const url="https://www.virenderdass.ca/pledge",text="I am pledging my vote for Virender Dass in Abbotsford-Mission. Join me:",enc=encodeURIComponent;
+  const map={facebook:"https://www.facebook.com/sharer/sharer.php?u="+enc(url),
+    x:"https://twitter.com/intent/tweet?text="+enc(text)+"&url="+enc(url),
+    whatsapp:"https://wa.me/?text="+enc(text+" "+url),
+    email:"mailto:?subject="+enc("Pledge your vote for Virender Dass")+"&body="+enc(text+"\n\n"+url)};
+  $$("[data-share]").forEach(a=>{a.href=map[a.dataset.share]||"#"});
+  const c=$("[data-copy]");
+  if(c)c.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(url);c.textContent="Link copied"}catch(err){window.prompt("Copy this link",url)}setTimeout(()=>{c.textContent="Copy link"},2500)});
+})();
 
 /* wall of notes */
 const SAMPLE=[
@@ -250,7 +304,7 @@ async function loadWall(){
   let notes=[];
   if(CONFIG.ENDPOINT){$("#wall").replaceChildren(el("div",{class:"wall-empty"},"Loading notes..."))}
   if(CONFIG.ENDPOINT){
-    try{const r=await fetch(CONFIG.ENDPOINT+"?action=notes");const j=await r.json();notes=(j&&j.notes)||[]}catch(e){}
+    for(let i=0;i<2&&!notes.length;i++){try{const r=await fetch(CONFIG.ENDPOINT+"?action=notes");const j=await r.json();notes=(j&&j.notes)||[];break}catch(e){await new Promise(res=>setTimeout(res,1200))}}
   }
   if(notes.length)return renderWall(notes,false);
   if(CONFIG.SHOW_SAMPLE_NOTES)return renderWall(SAMPLE,true);

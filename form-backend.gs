@@ -48,7 +48,8 @@ const TABS = {
   volunteer: "Volunteers",
   lawnsign:  "LawnSigns",
   invite:    "Invites",
-  updates:   "Updates"
+  updates:   "Updates",
+  pledge:    "Pledges"
 };
 
 // Columns that come from the website form, in order. Extra columns are filled by the team.
@@ -57,7 +58,8 @@ const FIELDS = {
   volunteer: ["submitted_at","ref","first_name","last_name","mobile","email","postal_code","help","availability","consent_contact","privacy"],
   lawnsign:  ["submitted_at","ref","first_name","last_name","mobile","email","street","city","postal_code","owner_ok","consent_contact","privacy"],
   invite:    ["submitted_at","ref","first_name","organization","email","mobile","event_type","date","location","details","consent_contact","privacy"],
-  updates:   ["submitted_at","ref","first_name","email","postal_code","mobile","consent_email","consent_sms","privacy"]
+  updates:   ["submitted_at","ref","first_name","email","postal_code","mobile","consent_email","consent_sms","privacy"],
+  pledge:    ["submitted_at","ref","first_name","last_name","email","mobile","postal_code","pledge","lawn_sign","street","city","owner_ok","volunteer","consent_email","consent_sms","privacy"]
 };
 
 // Team-only columns added to the right of the form columns.
@@ -66,7 +68,8 @@ const EXTRA = {
   volunteer: ["status","assigned_to","internal_notes"],
   lawnsign:  ["status","delivered_by","delivered_at","internal_notes"],
   invite:    ["status","owner","internal_notes"],
-  updates:   ["status"]
+  updates:   ["status"],
+  pledge:    ["status","assigned_to","internal_notes"]
 };
 
 /** Run once from the editor. Creates tabs and headings. */
@@ -100,7 +103,12 @@ function doPost(e) {
     const data = JSON.parse(e.postData.contents || "{}");
     if (data.website) return out({ ok: true });                 // honeypot filled: bot, ignore quietly
     const type = String(data.type || "");
-    if (!TABS[type]) return out({ ok: false, error: "unknown form" });
+    if (!TABS[type]) {                                          // never lose a submission: park unknown forms in an "Other" tab
+      let oth = getSS().getSheetByName("Other");
+      if (!oth) { oth = getSS().insertSheet("Other"); oth.getRange(1, 1, 1, 2).setValues([["received_at", "raw"]]); }
+      oth.appendRow([new Date().toISOString(), clean(JSON.stringify(data))]);
+      return out({ ok: true, note: "saved to Other" });
+    }
 
     const sh = getSS().getSheetByName(TABS[type]);
     if (!sh) return out({ ok: false, error: "run setup first" });
