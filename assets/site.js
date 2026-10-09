@@ -6,7 +6,7 @@ const CONFIG={
   PHONE_DISPLAY:"778-998-4736",      // Campaign phone or text number
   PHONE_TEL:"17789984736",           // Same number, digits only
   LINKS:{
-    pledge:"pledge.html",   // the campaign's own pledge page
+    pledge:"/pledge",   // the campaign's own pledge page
     donate:"https://www.virenderdass.ca/donate",
     video:""                                // Launch video URL (YouTube). Leave empty to hide the "Watch the launch video" button
   },
@@ -266,7 +266,7 @@ if($("#pledge-form"))buildForm("pledge",$("#pledge-form"));
 
 /* share buttons on the pledge page */
 (function(){
-  const url="https://www.virenderdass.ca/pledge",text="I am pledging my vote for Virender Dass in Abbotsford-Mission. Join me:",enc=encodeURIComponent;
+  const url="https://virenderdass.ca/pledge",text="I am pledging my vote for Virender Dass in Abbotsford-Mission. Join me:",enc=encodeURIComponent;
   const map={facebook:"https://www.facebook.com/sharer/sharer.php?u="+enc(url),
     x:"https://twitter.com/intent/tweet?text="+enc(text)+"&url="+enc(url),
     whatsapp:"https://wa.me/?text="+enc(text+" "+url),
@@ -334,5 +334,18 @@ if($("#wall"))loadWall();
   tick();
   const reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   setInterval(tick,reduce?60000:1000);
+})();
+/* deep links: /#volunteer, /#lawn-sign and /#invite scroll to Get involved and open the matching pop-up */
+(function(){
+  const map={"volunteer":"volunteer","lawn-sign":"lawnsign","invite":"invite"};
+  function go(){
+    const k=map[location.hash.slice(1)],sec=$("#involved");
+    if(!k||!sec)return;
+    sec.scrollIntoView();
+    if(!dlg.open)openForm(k);
+  }
+  dlg.addEventListener("close",()=>{if(map[location.hash.slice(1)])history.replaceState(null,"",location.pathname+location.search+"#involved")});
+  window.addEventListener("hashchange",go);
+  go();
 })();
 })();

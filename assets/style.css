@@ -475,3 +475,8 @@ dialog::backdrop{background:rgba(21,10,41,.7)}
 }
 
 @media (max-width:352px){.site-header .party-logo{display:none}}
+
+@media (max-width:980px){.teaser-grid .photo-fig{order:2}}
+
+/* cutout portrait: keep depth behind the transparent background */
+.portrait .frame.has-img{background:linear-gradient(160deg,#3a2a66,#241647)}
