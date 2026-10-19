@@ -82,8 +82,9 @@
       <a class="link" href="/why-im-running">Why I'm running</a>
       <a class="link" href="/policies">Policies</a>
       <a class="link" href="/your-say">Your Say</a>
+      <a class="link" href="/#trending" data-trending-link hidden>Trending</a>
       <a class="link" href="/#involved">Get involved</a>
-      <a class="link" href="/#vote">How to vote</a>
+      <a class="link" href="/free-ride-to-vote" data-ride-link>Free ride to vote</a>
       <span class="cta">
         <button class="btn btn-ghost" data-form="volunteer" type="button">Volunteer</button>
         <a class="btn btn-gold" href="#donate">Donate</a>
@@ -172,6 +173,17 @@
   </div>
 </section>
 
+<section class="block trending" id="trending" aria-labelledby="trend-title" hidden>
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="trend-title">Trending on social.</h2>
+      <p>Short videos from Virender's Facebook and Instagram. Press play to watch.</p>
+    </div>
+    <div class="video-row" id="video-row" role="region" aria-label="Campaign videos" tabindex="0"></div>
+    <p class="video-note">Videos load from Facebook, Instagram or YouTube only after you press play, and those companies may collect information when they do. <button class="linkbtn" type="button" data-privacy-open>Privacy notice</button></p>
+  </div>
+</section>
+
 <section class="block involved" id="involved" aria-labelledby="inv-title">
   <div class="wrap">
     <div class="sec-head">
@@ -219,6 +231,10 @@
         <span class="what">Eligibility</span>
         <p>A Canadian citizen, 18 or older on October 24, and a BC resident since April 23, 2026.</p>
       </div>
+    </div>
+    <div class="ride-strip">
+      <div><strong>Need a ride to vote?</strong><span>Free rides for seniors and anyone who needs one. We're not asking who you vote for.</span></div>
+      <a class="btn btn-navy btn-lg" href="/free-ride-to-vote">Book a free ride</a>
     </div>
     <p class="vote-actions">
       <a class="btn btn-navy" href="https://wheretovote.elections.bc.ca" target="_blank" rel="noopener">Find your voting place</a>
@@ -297,6 +313,7 @@
     <div id="dlg-body"></div>
   </div>
 </dialog>
+<script src="assets/videos.js"></script>
 <script src="assets/site.js"></script>
 </body>
 </html>

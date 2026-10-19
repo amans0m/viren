@@ -212,7 +212,7 @@ dialog::backdrop{background:rgba(21,10,41,.7)}
   .f-grid{grid-template-columns:1fr 1fr}
   .portrait{max-width:420px}
 }
-@media (max-width:1100px){
+@media (max-width:1139px){
   .menu-btn{display:block}
   .nav{display:none;position:absolute;left:0;right:0;top:100%;background:var(--navy);flex-direction:column;align-items:stretch;gap:0;padding:12px 24px 24px;border-bottom:4px solid var(--gold)}
   .nav.open{display:flex}
@@ -439,7 +439,7 @@ dialog::backdrop{background:rgba(21,10,41,.7)}
 }
 /* 3. Donate stays visible in the sticky header on phones */
 .header-donate{display:none}
-@media (max-width:1100px){
+@media (max-width:1139px){
   .header-donate{display:inline-flex;margin-left:auto;min-height:42px;padding:8px 16px;font-size:15px}
   .header-donate + .menu-btn{margin-left:10px}
 }
@@ -456,7 +456,7 @@ dialog::backdrop{background:rgba(21,10,41,.7)}
 .done .next-btns{display:flex;flex-wrap:wrap;gap:10px}
 
 /* phone header: logo, name, Donate and Menu must all fit */
-@media (max-width:1100px){.bar{gap:10px}}
+@media (max-width:1139px){.bar{gap:10px}}
 @media (max-width:640px){
   .lockup{gap:10px;min-width:0}
   .site-header .party-logo{height:22px;width:auto}
@@ -480,3 +480,77 @@ dialog::backdrop{background:rgba(21,10,41,.7)}
 
 /* cutout portrait: keep depth behind the transparent background */
 .portrait .frame.has-img{background:linear-gradient(160deg,#3a2a66,#241647)}
+
+/* Trending on social */
+.trending{background:var(--paper)}
+.video-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:26px 20px;align-items:start}
+.vcard2{min-width:0}
+.vframe{position:relative;border-radius:6px;overflow:hidden;background:var(--navy);width:100%}
+.vframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.vplay{position:absolute;inset:0;width:100%;height:100%;border:0;padding:16px;cursor:pointer;text-align:left;color:var(--white);background:linear-gradient(160deg,#3a2a66,#150A29);display:flex;flex-direction:column;justify-content:flex-end;gap:10px;font:inherit}
+.vplay.has-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.vplay.has-thumb::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(21,10,41,.88),rgba(21,10,41,.1) 60%)}
+.vplay>*{position:relative;z-index:1}
+.vbadge{position:absolute!important;top:14px;left:14px;font:700 12px/1 var(--body);background:rgba(255,255,255,.14);padding:6px 10px;border-radius:99px}
+.vbtn{position:absolute!important;top:50%;left:50%;transform:translate(-50%,-60%);width:64px;height:64px;border-radius:50%;background:var(--gold);color:var(--navy);display:grid;place-items:center;font-size:24px;padding-left:5px;transition:transform .15s}
+.vplay:hover .vbtn,.vplay:focus-visible .vbtn{transform:translate(-50%,-60%) scale(1.08)}
+.vtitle{font:700 21px/1.1 var(--display);letter-spacing:.005em}
+.vmeta{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:15px}
+.vtopic{font:700 12px/1 var(--body);background:rgba(21,10,41,.09);padding:5px 9px;border-radius:99px}
+.video-note{margin-top:28px;font-size:14px;color:var(--muted);max-width:70ch}
+.video-note .linkbtn{color:var(--ink)}
+@media (max-width:640px){
+  .video-row{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:70%;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:12px;margin-right:-18px;padding-right:18px}
+  .vcard2{scroll-snap-align:start}
+}
+@media (prefers-reduced-motion:reduce){.vbtn{transition:none}}
+
+/* desktop header: compact enough for seven links plus the two buttons on one line */
+@media (min-width:1140px){
+  .nav{gap:16px}
+  .nav a.link{font-size:14px;white-space:nowrap}
+  .nav .cta{margin-left:4px;gap:8px}
+  .nav .btn{padding:8px 14px;font-size:14px}
+  .lockup .name{font-size:26px}
+  .site-header .party-logo{height:30px;width:auto}
+  .bar{gap:20px}
+}
+
+@media (min-width:641px){.vcard2.vwide{grid-column:span 2}}
+
+/* Free Ride to Vote: larger text and bigger buttons */
+.ride-dates{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;max-width:760px}
+.ride-dates>div{background:var(--navy);color:var(--white);border-radius:6px;padding:20px 22px}
+.ride-dates strong{display:block;font:800 clamp(2rem,5vw,2.8rem)/1 var(--display)}
+.ride-dates span{display:block;margin-top:8px;font-size:19px;color:#E7E3F3}
+.ride-card{max-width:760px}
+.ride .formcard .intro{font-size:19px}
+.ride .field label,.ride .field .lab{font-size:19px}
+.ride .field input[type=text],.ride .field input[type=tel],.ride .field select,.ride .field textarea{font-size:19px;min-height:58px}
+.ride .field .help{font-size:16px}
+.ride .field .radio-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:2px}
+.ride .field .radio-row label{display:flex;align-items:center;gap:12px;border:2px solid #B9B3CC;border-radius:6px;padding:14px 16px;font-size:20px;font-weight:700;cursor:pointer;min-height:58px;background:#fff;margin:0}
+.ride .field .radio-row input{width:26px;height:26px;accent-color:var(--navy);margin:0}
+.ride .field .radio-row label:has(input:checked){border-color:var(--navy);background:var(--gold-soft)}
+.ride .field.invalid .radio-row label{border-color:#A3122A}
+.ride-warn{background:#FFF2CC;border-left:5px solid #8a4b00;padding:10px 14px;margin-top:10px;font-size:17px;font-weight:600}
+.btn-lg{min-height:60px;font-size:20px;padding:14px 28px}
+.ride .btn-submit{width:100%}
+.ride .fine{font-size:15px}
+.ride-footnote{margin-top:22px;max-width:760px;font-size:var(--fs-body)}
+.ride-closed{padding:8px 0}
+.ride-closed h3{font-size:32px;margin-bottom:10px}
+.demo-banner{background:#FFF2CC;border:2px solid #8a4b00;padding:10px 14px;font-weight:700;margin:14px 0 0}
+.confirm{max-width:760px}
+.confirm p{margin-bottom:16px}
+.confirm-ref{background:var(--white);border:3px solid var(--navy);border-radius:6px;padding:20px 24px;margin-bottom:24px;display:inline-block}
+.confirm-ref strong{display:block;font:800 clamp(2.4rem,6vw,3.4rem)/1 var(--display);letter-spacing:.06em;margin:4px 0}
+.confirm-ref span{font-size:var(--fs-body)}
+.confirm-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:26px}
+.ride-strip{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;background:var(--white);border:3px solid var(--navy);border-radius:6px;padding:18px 22px;margin-bottom:28px;max-width:900px}
+.ride-strip strong{display:block;font:800 clamp(1.7rem,3.4vw,2.2rem)/1.05 var(--display);color:var(--navy)}
+.ride-strip span{display:block;margin-top:4px;font-size:var(--fs-body);color:var(--ink)}
+@media (max-width:640px){.ride-dates{grid-template-columns:1fr}.ride-strip .btn{width:100%}}
+
+.ride-strip{max-width:none}
+.ride-strip>div{flex:1 1 320px;min-width:0}
