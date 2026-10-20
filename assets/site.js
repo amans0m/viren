@@ -6,7 +6,7 @@ const CONFIG={
   PHONE_DISPLAY:"778-998-4736",      // Campaign phone or text number
   PHONE_TEL:"17789984736",           // Same number, digits only
   RIDE_ENDPOINT:"https://script.google.com/macros/s/AKfycbyS43qtMtTi6cMy287GKbk6AZmN2I80RWWZCSVu_jiiQRfG0mJsdCHkLwjYV2IMXv9B/exec",                  // Free Ride to Vote: web app URL of the separate ride script (ends in /exec)
-  RIDE_MIN_NOTICE_HOURS:5,           // rides must be booked at least this many hours before the pickup window starts
+  RIDE_MIN_NOTICE_HOURS:24,          // rides must be booked at least this many hours before the pickup window starts (24 = "a day in advance")
   LINKS:{
     pledge:"/pledge",   // the campaign's own pledge page
     donate:"https://www.virenderdass.ca/donate",
@@ -251,7 +251,7 @@ function openPrivacy(){
   $("#dlg-body").innerHTML='<div class="priv">'+
   '<h3>What we collect</h3><p>What you type into our forms: your message, postal code and any contact details, name or address you choose to give. If you pledge your support, we also keep that you plan to vote for Virender.</p>'+
   '<h3>Why</h3><ul><li>To read and reply to your note.</li><li>To arrange volunteering, lawn signs and invitations.</li><li>To send campaign updates if you asked for them.</li></ul>'+
-  '<h3>Free ride requests</h3><p>If you book a ride, we collect your name, phone number, pickup address and ride details. We use them only to arrange and confirm your ride, and we keep them only as long as needed to run the ride service. We do not ask or record who you plan to vote for.</p>'+
+  '<h3>Free ride requests</h3><p>If you book a ride, we collect your name, phone number, pickup address and ride details, including whether you need mobility help, are 65 or older, and have another way to get to your voting place. We use them only to arrange and confirm your ride, and we keep them only as long as needed to run the ride service. We do not ask or record who you plan to vote for.</p>'+
   '<h3>Videos</h3><p>Videos from Facebook, Instagram or YouTube load only after you press play. Those services may collect information, including through cookies, once they load.</p>'+
   '<h3>The wall</h3><p>We only show your message if you ticked the box, with your first name only. A person checks every note first.</p>'+
   '<h3>Who sees it</h3><p>The campaign team, OneBC, and the service providers that run our forms and email. Your details may be added to the OneBC supporter list.</p>'+
@@ -395,7 +395,8 @@ if($("#wall"))loadWall();
   }
   list.forEach(v=>row.appendChild(card(v)));
 })();
-/* Free Ride to Vote: booking form. Sends to its own Google Sheet, then goes to the confirmation page. */
+/* Free Ride to Vote: request form. Sends to its own Google Sheet, then goes to the confirmation page.
+   A request is NOT a booking: the coordinator confirms every ride by phone. */
 (function(){
   const mount=$("#ride-form");
   const confirmBox=$("#confirm-ref");
@@ -405,7 +406,8 @@ if($("#wall"))loadWall();
     if(q.get("demo")==="1")$("#confirm-demo").hidden=false;
   }
   const strip=$(".ride-strip");if(strip&&!CONFIG.RIDE_ENDPOINT)strip.hidden=true;   // no ride promotion on the home page until the ride script is connected
-  const NOTICE=CONFIG.RIDE_MIN_NOTICE_HOURS||5, loaded=Date.now();
+  const NOTICE=(typeof CONFIG.RIDE_MIN_NOTICE_HOURS==="number")?CONFIG.RIDE_MIN_NOTICE_HOURS:24, loaded=Date.now();
+  const AHEAD=NOTICE>=24?"at least a day in advance":"at least "+NOTICE+" hours ahead";
   const DAYS=[[16,"Friday"],[17,"Saturday"],[18,"Sunday"],[19,"Monday"],[20,"Tuesday"],[21,"Wednesday"],[24,"Saturday"]];   // October 2026
   const WINDOWS=["8 a.m. to 11 a.m.","11 a.m. to 2 p.m.","2 p.m. to 5 p.m.","5 p.m. to 8 p.m."], STARTS=[8,11,14,17];
   function pacific(){
@@ -413,7 +415,7 @@ if($("#wall"))loadWall();
     const g=t=>parseInt(p.find(x=>x.type===t).value,10);return{y:g("year"),m:g("month"),d:g("day"),h:g("hour")%24,n:g("minute")};
   }
   const wall=(y,m,d,h,n)=>Date.UTC(y,m-1,d,h,n||0);
-  function available(){                                  // days and windows that can still be booked (Pacific time)
+  function available(){                                  // days and windows that can still be requested (Pacific time)
     const t=pacific(),now=wall(t.y,t.m,t.d,t.h,t.n),list=[];
     DAYS.forEach(([d,name])=>{
       const ws=WINDOWS.map((label,i)=>({label,ok:wall(2026,10,d,STARTS[i],0)-now>=NOTICE*36e5}));
@@ -424,7 +426,7 @@ if($("#wall"))loadWall();
     return list;
   }
   const rideLinks=$$("[data-ride-link]");
-  if(rideLinks.length&&(!CONFIG.RIDE_ENDPOINT||!available().length))rideLinks.forEach(a=>{a.hidden=true});   // menu link only while rides can be booked
+  if(rideLinks.length&&(!CONFIG.RIDE_ENDPOINT||!available().length))rideLinks.forEach(a=>{a.hidden=true});   // menu link only while rides can be requested
   if(!mount)return;
   const days=available();
   if(!days.length){
@@ -440,15 +442,21 @@ if($("#wall"))loadWall();
     row.appendChild(el("p",{class:"err",id:"r-"+n+"-e",role:"alert"}));rows[n]=row;form.appendChild(row);return row;
   }
   const inp=(n,type,ac)=>{const i=el("input",{id:"r-"+n,name:n,type:type});if(ac)i.setAttribute("autocomplete",ac);if(type==="tel")i.setAttribute("inputmode","tel");return i};
+  function radio(n,label,opts,help,long){                      // large yes/no style buttons
+    const row=el("div",{class:"field"}),lab=el("span",{class:"lab",id:"r-"+n+"-l"},label),grp=el("div",{class:"radio-row"+(long?" long":""),role:"radiogroup","aria-labelledby":"r-"+n+"-l"});
+    opts.forEach(([v,t])=>{const l=el("label",{});l.appendChild(el("input",{type:"radio",name:n,value:v}));l.appendChild(el("span",{},t));grp.appendChild(l)});
+    row.append(lab,grp);if(help)row.appendChild(el("p",{class:"help"},help));row.appendChild(el("p",{class:"err",id:"r-"+n+"-e",role:"alert"}));
+    rows[n]=row;form.appendChild(row);return row;
+  }
   field("name","Your name",inp("name","text","name"));
-  field("phone","Phone number",inp("phone","tel","tel"));
+  field("phone","Phone number",inp("phone","tel","tel"),"We will call this number to confirm your ride.");
   field("address","Pickup address",inp("address","text","street-address"),"Street address and city. Add an apartment or buzzer number if there is one.");
   const daySel=el("select",{id:"r-day",name:"day"});daySel.appendChild(el("option",{value:""},"Choose a day"));
   days.forEach(d=>{const o=el("option",{value:d.value});o.textContent=d.label;daySel.appendChild(o)});
   field("day","Which day do you want to vote?",daySel);
   const winSel=el("select",{id:"r-window",name:"window"});
-  const winRow=field("window","Pickup window",winSel,"Please book at least "+NOTICE+" hours ahead so we can arrange a driver.");
-  const warn=el("p",{class:"ride-warn",hidden:""},"Same-day rides need at least "+NOTICE+" hours' notice, so earlier windows are greyed out.");
+  const winRow=field("window","Pickup window",winSel,"Please request <strong>"+AHEAD+"</strong> so we can arrange a driver.");
+  const warn=el("p",{class:"ride-warn",hidden:""},"Rides must be requested "+AHEAD+", so earlier windows are greyed out.");
   winRow.insertBefore(warn,winRow.querySelector(".err"));
   function renderWindows(){
     winSel.replaceChildren();
@@ -456,19 +464,24 @@ if($("#wall"))loadWall();
     if(!d){winSel.appendChild(el("option",{value:""},"Choose a day first"));warn.hidden=true;return}
     winSel.appendChild(el("option",{value:""},"Choose a time window"));
     d.ws.forEach(w=>{const o=el("option",{value:w.label});o.textContent=w.label+(w.ok?"":" (too soon)");if(!w.ok)o.disabled=true;winSel.appendChild(o)});
-    warn.hidden=!(d.today&&d.ws.some(w=>!w.ok));
+    warn.hidden=!d.ws.some(w=>!w.ok);
   }
   daySel.addEventListener("change",renderWindows);renderWindows();
   field("preferred_time","Preferred time within that window (optional)",inp("preferred_time","text"),"For example, about 12:30.");
-  // yes / no: large buttons
-  const hrow=el("div",{class:"field"}),hlab=el("span",{class:"lab",id:"r-help-l"},"Do you need help walking or a wheelchair-friendly vehicle?"),grp=el("div",{class:"radio-row",role:"radiogroup","aria-labelledby":"r-help-l"});
-  ["Yes","No"].forEach(v=>{const l=el("label",{});const r=el("input",{type:"radio",name:"needs_help",value:v});l.appendChild(r);l.appendChild(el("span",{},v));grp.appendChild(l)});
-  hrow.append(hlab,grp,el("p",{class:"err",id:"r-needs_help-e",role:"alert"}));rows.needs_help=hrow;form.appendChild(hrow);
+  radio("needs_help","Do you need help walking or a wheelchair-friendly vehicle?",[["Yes","Yes"],["No","No"]]);
+  radio("age65","Are you 65 or older?",[["Yes","Yes"],["No","No"]]);
+  radio("alternative","Do you have another reasonable way to get to your voting place?",[["No","No, I need help getting there"],["Yes","Yes, I have another way"]],
+        "For example, a family member or friend who can drive you, a bus you can manage, or your own vehicle. You don't need to explain, and we never ask for medical details or documents.",true);
   const ta=(n)=>el("textarea",{id:"r-"+n,name:n,maxlength:"500"});
   field("suggestion","One thing you want fixed in our valley? (optional)",ta("suggestion"),"Please don't tell us who you plan to vote for.");
   field("notes","Anything else we should know? (optional)",ta("notes"),"For example, a gate code or a walker. Please don't tell us who you plan to vote for.");
+  // acknowledgement: this is a request, not a booking
+  const ackRow=el("div",{class:"field ack"}),ackLab=el("label",{class:"check",for:"r-ack"});
+  ackLab.appendChild(el("input",{type:"checkbox",id:"r-ack",name:"ack"}));
+  ackLab.appendChild(el("span",{},'I have read the <a href="#full-rules">ride rules</a> and understand this is a request, not a confirmed booking. A volunteer will call me to confirm, and a ride is one return trip from home to my voting place and back.'));
+  ackRow.append(ackLab,el("p",{class:"err",id:"r-ack-e",role:"alert"}));rows.ack=ackRow;form.appendChild(ackRow);
   form.appendChild(el("div",{class:"hp","aria-hidden":"true"},'<label>Leave this empty<input type="text" name="website" tabindex="-1" autocomplete="off"></label>'));
-  const btn=el("button",{class:"btn btn-navy btn-lg btn-submit",type:"submit"},"Book my free ride");
+  const btn=el("button",{class:"btn btn-navy btn-lg btn-submit",type:"submit"},"Request my free ride");
   const sub=el("div",{class:"submit-row"});sub.appendChild(btn);form.appendChild(sub);
   form.appendChild(el("p",{class:"fine"},'We use this only to arrange your ride and to call you. We never ask who you vote for. See the <a href="#" data-privacy>privacy notice</a>.'));
   mount.appendChild(form);
@@ -481,7 +494,7 @@ if($("#wall"))loadWall();
     e.preventDefault();
     const v=n=>(form.elements[n].value||"").trim(),data={};
     ["name","phone","address","day","window","preferred_time","suggestion","notes"].forEach(n=>{data[n]=v(n)});
-    data.needs_help=(form.querySelector('input[name=needs_help]:checked')||{}).value||"";
+    ["needs_help","age65","alternative"].forEach(n=>{data[n]=(form.querySelector("input[name="+n+"]:checked")||{}).value||""});
     const errs={};
     if(!data.name)errs.name="Please enter your name.";
     if(!data.phone)errs.phone="Please enter your phone number.";else if(!RX.phone.test(data.phone))errs.phone="Enter a 10-digit phone number.";
@@ -489,9 +502,12 @@ if($("#wall"))loadWall();
     if(!data.day)errs.day="Please choose a day.";
     if(!data.window)errs.window="Please choose a pickup window.";
     if(!data.needs_help)errs.needs_help="Please choose Yes or No.";
+    if(!data.age65)errs.age65="Please choose Yes or No.";
+    if(!data.alternative)errs.alternative="Please choose an answer.";
+    if(!form.elements.ack.checked)errs.ack="Please tick the box to continue.";
     let first=null;
     Object.keys(rows).forEach(n=>{const msg=errs[n]||"";rows[n].classList.toggle("invalid",!!msg);$("#r-"+n+"-e",form).textContent=msg;if(msg&&!first)first=n});
-    if(first){const c=first==="needs_help"?form.querySelector("input[name=needs_help]"):form.elements[first];c.focus();return}
+    if(first){const c=["needs_help","age65","alternative"].includes(first)?form.querySelector("input[name="+first+"]"):form.elements[first];c.focus();return}
     btn.disabled=true;btn.textContent="Sending";
     const ref=String(Math.floor(100000+Math.random()*900000)),demo=!CONFIG.RIDE_ENDPOINT,spam=form.elements.website.value||(Date.now()-loaded<2500);
     let sent=true;
@@ -499,7 +515,7 @@ if($("#wall"))loadWall();
       sent=await sendToSheet(CONFIG.RIDE_ENDPOINT,Object.assign({ref:ref,submitted_at:new Date().toISOString(),source:source()},data));
     }else{await new Promise(r=>setTimeout(r,500))}
     if(!sent){
-      btn.disabled=false;btn.textContent="Book my free ride";
+      btn.disabled=false;btn.textContent="Request my free ride";
       const m=el("p",{class:"err",role:"alert",style:"display:block"},"Something went wrong and your request was not sent. Please try again, or call "+CONFIG.PHONE_DISPLAY+".");
       sub.after(m);setTimeout(()=>m.remove(),10000);return;
     }
